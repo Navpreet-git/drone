@@ -1,35 +1,34 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+
 package dronefinding;
 
 import java.awt.*;
 import javax.swing.*;
 
-/**
- *
- * @author Dell
- */
+
 public class Grid {
     private JFrame gameScreen;
     private JLabel[][] grid;
-    private boolean controllo;
     private images img;
-    private JButton connection;
     private int rows, columns, frameWidth, frameHeight;
     private String response;
-    public Grid(JFrame frame,Post r, String Response)
-    {
-        this.gameScreen = frame;
-        this.img = new images();
-        this.frameWidth = 1500;
-        this.frameHeight = 800;
-        frameCreation(r, frameWidth, frameHeight);
-        this.response = Response;
-        
+    private Post post;
+    private boolean[][] visited; // Grid to keep track of visited positions
+
+    public Grid(JFrame frame, Post r, String Response) {
+    this.gameScreen = frame;
+    this.post =r;
+    this.img = new images();
+    this.frameWidth = 1500;
+    this.frameHeight = 800;
+    frameCreation(r, frameWidth, frameHeight);
+    this.response = Response;
+    visited = new boolean[rows][columns]; // Initialize the visited grid
+
+    setstartIcon(r.extractPositionXFromResponse(Response), r.extractPositionYFromResponse(Response)); 
+    setwallIcon(r.extractPositionXFromResponse(Response), r.extractPositionYFromResponse(Response)); 
+    setroadIcon(r.extractPositionXFromResponse(Response), r.extractPositionYFromResponse(Response)); 
     }
-    
+
     public void frameCreation(Post r, int screenWidth, int screenHeight)
     {
         gameScreen.setBackground(Color.BLACK);
@@ -63,6 +62,15 @@ public class Grid {
         externalWalls(l, 0, 0, panelWidth, panelHeight);
         gameScreen.add(panel);
     }
+
+    public int getRows() {
+        return rows;
+    }
+
+    public int getColumns() {
+        return columns;
+    }
+    
 
 
 
@@ -138,6 +146,72 @@ public class Grid {
     public JFrame getGameScreen() {
         return gameScreen;
     }
+
+    public void setDroneIcon(int startX, int startY) {
+    grid[startY][startX].setIcon(img.getImages(4)); // Assuming 4 represents the drone image
+    }
+    public void markVisited(int x, int y) {
+        visited[y][x] = true;
+    }
+
+    // Method to check if a position has been visited
+    public boolean isVisited(int x, int y) {
+        return visited[y][x];
+    }
+    public void setstartIcon(int startX, int startY) {
+    grid[startY][startX].setIcon(img.getImages(0)); // Assuming 4 represents the drone image
+    }
     
+    
+
+   public void setwallIcon(int startX, int startY) {
+    String look = post.look();
+    System.out.println(look);
+    int[] neighbours = post.extractNeighborsFromResponse(look);
+    
+    for (int i = 0; i < neighbours.length; i++) {
+        if (neighbours[i] == 1) {
+            switch (i) {
+                case 0:
+                    grid[startY - 1][startX].setIcon(img.getImages(1));
+                    break;
+                case 1:
+                    grid[startY][startX + 1].setIcon(img.getImages(1));
+                    break;
+                case 2:
+                    grid[startY + 1][startX].setIcon(img.getImages(1));
+                    break;
+                case 3:
+                    grid[startY][startX - 1].setIcon(img.getImages(1));
+                    break;
+                // Add more cases if needed for additional neighbors
+            }
+        }
+    }
+}
+    public void setroadIcon(int startX, int startY) {
+    String look = post.look();
+    System.out.println(look);
+    int[] neighbours = post.extractNeighborsFromResponse(look);
+    
+    for (int i = 0; i < neighbours.length; i++) {
+        if (neighbours[i] == 0) {
+            switch (i) {
+                case 0:
+                    grid[startY - 1][startX].setIcon(img.getImages(0));
+                    break;
+                case 1:
+                    grid[startY][startX + 1].setIcon(img.getImages(0));
+                    break;
+                case 2:
+                    grid[startY + 1][startX].setIcon(img.getImages(0));
+                    break;
+                case 3:
+                    grid[startY][startX - 1].setIcon(img.getImages(0));
+                    break;
+            }
+        }
+    }
+  }
 }
 
