@@ -18,14 +18,13 @@ public class graphics {
     
     public graphics() {
         createFirstScreen();
-        
     }
 
     private void Frame(){
          this.frame = new JFrame("Trophy Finder");        
          frame.setSize(1500, 800);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-   }
+    }
     
    private void createFirstScreen() {
        Frame();
@@ -39,22 +38,28 @@ public class graphics {
         panel.add(textField);
         panel.add(startButton);
 
-        startButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                initResponse= p.init();
-                frame.getContentPane().removeAll(); 
-                createSecondScreen();
-            }
-        });
+        startButton.addActionListener(new ActionListenerImpl());
 
         frame.add(panel);
         frame.setVisible(true);
     }
    
    private void createSecondScreen() {
-       Grid grid = new Grid(frame,p , initResponse);
+       Grid grid = new Grid(frame,p , initResponse);        
        images img;
-       Drone d = new Drone();
-}
+       Drone d = new Drone(p,grid);
+    }
+
+    private class ActionListenerImpl implements ActionListener {
+
+        public ActionListenerImpl() {
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            initResponse= p.init();
+            frame.getContentPane().removeAll();
+            createSecondScreen();
+        }
+    }
 }

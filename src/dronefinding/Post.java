@@ -107,7 +107,21 @@ public class Post {
          
          return moveResponse;
     }
-     public static int extractEnergyFromResponse(String response) {
+    
+    
+public String load() {
+         String Endpoint = endpoint + "load" ;
+    
+    String payload = "{\"team\": \"" + teamName + "\", \"seed\": \"" + Extractedseed + "\"}";
+    String loadResponse = sendPostRequest(Endpoint, payload);
+    
+    // Print the load response to the terminal
+    System.out.println("Load Response: " + loadResponse);
+    
+    // Check if the load response indicates success
+    return loadResponse;
+}
+     public int extractEnergyFromResponse(String response) {
         int energy = jsonResponse.getInt("Energy");
         return energy;
     }
