@@ -126,6 +126,15 @@ public String load() {
         return energy;
     }
 
+     
+ public String unload() {
+     String Endpoint= endpoint + "unload";
+        String payload = "{\"team\": \"" + teamName + "\", \"seed\": \"" + Extractedseed + "\"}";
+        String unloadResponse = sendPostRequest(Endpoint, payload);   
+        System.out.println(unloadResponse);
+        return unloadResponse;
+    }
+
     public static int extractPositionXFromResponse(String response) {
     try {
         JSONObject jsonResponse = new JSONObject(response);

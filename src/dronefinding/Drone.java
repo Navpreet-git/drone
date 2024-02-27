@@ -1,6 +1,5 @@
 package dronefinding;
 
-import java.util.Random;
 import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -15,17 +14,19 @@ public class Drone {
     private int prevDirection;
     private Grid grid;
     private Timer timer;
-    private Stack<Integer> prevDirectionsStack; // Stack to store previous directions
-    private boolean[][] visited; // Matrix to keep track of visited cells
+    private Stack<Integer> prevDirectionsStack;
+    private boolean returning = false; 
 
     public Drone(Post p, Grid g) {
-        this.post = p;
-        this.grid = g;
-        this.visited = new boolean[g.getRows()][g.getColumns()];
-        timer = new Timer();
-        timer.scheduleAtFixedRate(new MoveTask(), 0, 100);
-        prevDirectionsStack = new Stack<>(); // Initialize the stack
-    }
+    this.post = p;
+    this.grid = g;
+    timer = new Timer();
+    timer.scheduleAtFixedRate(new MoveTask(), 0, 100);
+    prevDirectionsStack = new Stack<>();
+    prevDirection = -1; 
+
+}
+
 
     private class MoveTask extends TimerTask {
         @Override
@@ -37,11 +38,11 @@ public class Drone {
     public int[] looking() {
         String response = post.look();
         neighbours = post.extractNeighborsFromResponse(response);
+        grid.updateProgressBar(post.extractEnergyFromResponse(response));
         return neighbours;
     }
 
     public int Direction() {
-        Random random = new Random();
         int[] availableDirections = new int[4];
         int count = 0;
         int directionTo3 = -1; // Direction towards '3', if found
@@ -73,85 +74,116 @@ public class Drone {
             availableDirections[count++] = 6; // Left
         }
 
-        if (count > 0) {
-            int randomIndex = random.nextInt(count);
-            return availableDirections[randomIndex];
-        } else {
-            return -1; // No available directions
+        
+
+        int[] prioritizedDirections = {4, 6, 2, 0};
+        for (int i = 0; i < prioritizedDirections.length; i++) {
+            for (int j = 0; j < count; j++) {
+                if (availableDirections[j] == prioritizedDirections[i]) {
+                    return availableDirections[j];
+                }
+
+            }
         }
+        return -1; // No available directions
     }
 
     public void moveDrone() {
+    int d = -1; // Default direction
+
+    if (!returning) {
         looking();
-        int d = Direction();
-        if (d != -1) {
-            // Check if the next position is already visited
-            int nextX = newposx;
-            int nextY = newposy;
-            switch (d) {
-                case 0:
-                    nextY--;
-                    break; // Up
-                case 2:
-                    nextX++;
-                    break; // Right
-                case 4:
-                    nextY++;
-                    break; // Down
-                case 6:
-                    nextX--;
-                    break; // Left
-            }
-            if (nextX >= 0 && nextX < grid.getRows() && nextY >= 0 && nextY < grid.getColumns() &&
-                    visited[nextX][nextY]) {
-                // Next position is visited, skip this move
-                return;
-            }
+        d = Direction();
+    }
 
-            String r = post.move(d);
-            prevDirectionsStack.push(prevDirection); // Push the previous direction onto the stack
-            prevposx = newposx;
-            prevposy = newposy;
+    if (d != -1) {
+        String r = post.move(d);
+        prevposx = newposx;
+        prevposy = newposy;
 
-            prevDirection = d;
-            newposx = post.extractPositionXFromResponse(r);
-            newposy = post.extractPositionYFromResponse(r);
+        prevDirection = d; // Update prevDirection after determining the move
 
-            visited[newposx][newposy] = true; // Mark the current cell as visited
+        newposx = post.extractPositionXFromResponse(r);
+        newposy = post.extractPositionYFromResponse(r);
 
-            grid.setDroneIcon(newposx, newposy);
-            grid.setroadIcon(newposx, newposy);
-            grid.setwallIcon(newposx, newposy);
-            grid.settrophyIcon(newposx, newposy);
+        // Store the direction in the path stack only if it leads towards the destination '3'
+        
 
-            // Set the position x and position y after every move
-            grid.setPosx(newposx);
-            grid.setPosy(newposy);
+        grid.setDroneIcon(newposx, newposy);
+        grid.setroadIcon(newposx, newposy);
+        grid.setwallIcon(newposx, newposy);
+        grid.settrophyIcon(newposx, newposy);
 
-            // Check if the destination cell contains '3', if so, stop moving
-            if (neighbours[d / 2] == 3) {
-                timer.cancel(); // Stop the timer
-                post.load();
-            }
-        } else {
-            // If dead end is encountered, backtrack using the previous directions stored in the stack
-            if (!prevDirectionsStack.isEmpty()) {
-                int previousDirection = prevDirectionsStack.pop();
-                int oppositeDirection = getOppositeDirection(previousDirection);
-                String response = post.move(oppositeDirection);
-                newposx = post.extractPositionXFromResponse(response);
-                newposy = post.extractPositionYFromResponse(response);
-                grid.setDroneIcon(newposx, newposy);
-                grid.setroadIcon(newposx, newposy);
-                grid.setwallIcon(newposx, newposy);
-                prevDirection = oppositeDirection;
+        // Set the position x and position y after every move
+        grid.setPosx(newposx);
+        grid.setPosy(newposy);
 
-                // Set the position x and position y after every move
-                grid.setPosx(newposx);
-                grid.setPosy(newposy);
-            }
+        if (!returning && prevDirection != -1) {
+        prevDirectionsStack.push(prevDirection);
+        System.out.println(prevDirectionsStack);
+        }
+
+
+        if (neighbours[d / 2] == 3) {
+            grid.setDroneTrophyIcon(newposx, newposy);
+            post.load();
+            startReturnJourney(); 
+            returning = true; 
+        }
+    } else if (!returning && !prevDirectionsStack.isEmpty()) {
+        // If dead end is encountered, backtrack using the previous directions stored in the stack
+        int previousDirection = prevDirectionsStack.pop();
+        System.out.println(prevDirectionsStack);
+        int oppositeDirection = getOppositeDirection(previousDirection);
+        String response = post.move(oppositeDirection);
+        newposx = post.extractPositionXFromResponse(response);
+        newposy = post.extractPositionYFromResponse(response);
+        grid.setDroneIcon(newposx, newposy);
+        grid.setroadIcon(newposx, newposy);
+        grid.setwallIcon(newposx, newposy);
+        prevDirection = oppositeDirection;
+
+        // Set the position x and position y after every move
+        grid.setPosx(newposx);
+        grid.setPosy(newposy);
+    } else {
+        timer.cancel(); // Stop the timer if there are no more directions to go back
+    }
+}
+
+    public void startReturnJourney() {
+        timer.cancel(); // Cancel the original movement timer
+        timer = new Timer();
+        timer.scheduleAtFixedRate(new ReturnMoveTask(), 0, 100);
+    }
+
+    private class ReturnMoveTask extends TimerTask {
+        @Override
+        public void run() {
+            returnJourney();
         }
     }
+
+    public void returnJourney() {
+    if (!prevDirectionsStack.isEmpty()) {
+        int previousDirection = prevDirectionsStack.pop();
+        int oppositeDirection = getOppositeDirection(previousDirection);
+        String response = post.move(oppositeDirection);
+        newposx = post.extractPositionXFromResponse(response);
+        newposy = post.extractPositionYFromResponse(response);
+        grid.setDroneTrophyIcon(newposx, newposy);
+        grid.setroadIcon(newposx, newposy);
+        grid.setwallIcon(newposx, newposy);
+        prevDirection = oppositeDirection;
+
+        // Set the position x and position y after every move
+        grid.setPosx(newposx);
+        grid.setPosy(newposy);
+    } else {
+        timer.cancel(); // Stop the timer if there are no more directions to go back
+        post.unload(); // Call unload from post
+    }
+}
 
     private int getOppositeDirection(int direction) {
         switch (direction) {
@@ -167,4 +199,5 @@ public class Drone {
                 return -1;
         }
     }
+    
 }

@@ -3,6 +3,7 @@ package dronefinding;
 
 import java.awt.*;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 public class Grid {
     private JFrame gameScreen;
@@ -14,8 +15,7 @@ public class Grid {
     private boolean[][] visited; // Grid to keep track of visited positions
     private int posx, posy;
     private JPanel panelforinformation; // Panel for information
-    private JProgressBar energyProgressBar;
-    private JLabel energyUsedLabel;
+    private JProgressBar progressBar;
 
     public Grid(JFrame frame, Post r, String Response) {
         this.gameScreen = frame;
@@ -32,9 +32,7 @@ public class Grid {
         setwallIcon(posx, posy);
         setroadIcon(posx, posy);
         settrophyIcon(posx, posy);
-
-        // Create the panel for information
-        createInformationPanel();
+        addProgressBar(post.extractEnergyFromResponse(Response));
     }
 
     public void frameCreation(Post r, int screenWidth, int screenHeight) {
@@ -166,6 +164,10 @@ public class Grid {
     public void setstartIcon(int X, int Y) {
         grid[Y][X].setIcon(img.getImages(0)); // Assuming 4 represents the drone image
     }
+    
+    public void setDroneTrophyIcon(int x, int y) {
+       grid[y][x].setIcon(img.getImages(5));
+    }
 
     public void setwallIcon(int startX, int startY) {
         String look = post.look();
@@ -218,38 +220,36 @@ public class Grid {
         }
     }
 
-    private void createInformationPanel() {
-        panelforinformation = new JPanel();
-        panelforinformation.setLayout(new GridLayout(2, 1));
+    
 
-        // Progress bar to show energy used
-        energyProgressBar = new JProgressBar();
-        energyProgressBar.setStringPainted(true);
-        energyProgressBar.setMaximum(100); // Assuming max energy is 100
+public void addProgressBar(int energy) {
+    // Create a panel to hold the progress bar
+    JPanel progressPanel = new JPanel(new BorderLayout());
+    progressPanel.setBorder(new EmptyBorder(10, 10, 10, 10)); // Add some padding
 
-        // Label to display energy used until load call
-        energyUsedLabel = new JLabel("Energy Used: 0");
-        panelforinformation.add(energyProgressBar);
-        panelforinformation.add(energyUsedLabel);
+    progressBar = new JProgressBar(0, energy); // Assuming the energy ranges from 0 to 100
+    progressBar.setValue(energy);
+    progressBar.setStringPainted(true); // Display percentage
 
-        // Add a black border to the information panel
-        panelforinformation.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-
-        // Add the information panel to the right side of the game screen
-        gameScreen.add(panelforinformation, BorderLayout.EAST);
+    // Set color based on energy level
+    if (energy >= 70) {
+        progressBar.setForeground(UIManager.getColor("ProgressBar.foreground")); // Default color
+    } else if (energy >= 35) {
+        progressBar.setForeground(Color.ORANGE); // Orange color
+    } else {
+        progressBar.setForeground(Color.RED); // Red color
     }
 
-    // Update energy used and progress bar
-    public void updateEnergyUsed(int energy) {
-        energyProgressBar.setValue(energy);
-        energyUsedLabel.setText("Energy Used: " + energy);
-    }
+    progressPanel.add(progressBar, BorderLayout.CENTER);
 
-    // Method to update energy used until load call
-    public void updateEnergyUntilLoad(int energyUntilLoad) {
-        energyUsedLabel.setText("Energy Used Until Load: " + energyUntilLoad);
-    }
+    // Add the progress bar panel to the bottom of the frame
+    gameScreen.add(progressPanel, BorderLayout.SOUTH);
+}
 
+
+    public void updateProgressBar(int energy) {
+        progressBar.setValue(energy);
+    }
     // Check if a cell has been visited
     public boolean isVisited(int x, int y) {
         return visited[x][y];
